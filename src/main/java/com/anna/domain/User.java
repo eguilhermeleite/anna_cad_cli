@@ -10,6 +10,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.ToString;
 
 @EqualsAndHashCode(onlyExplicitlyIncluded = true)
 @AllArgsConstructor
@@ -17,6 +18,7 @@ import lombok.Setter;
 @Setter
 @Getter
 @Entity
+@ToString
 public class User implements Serializable {
 	private static final long serialVersionUID = 1L;
 	 

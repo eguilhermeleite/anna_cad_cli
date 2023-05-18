@@ -1,11 +1,13 @@
 package com.anna.controller;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.security.InvalidAlgorithmParameterException;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
+import java.util.Random;
 
 import javax.crypto.BadPaddingException;
 import javax.crypto.Cipher;
@@ -68,15 +70,67 @@ public class UserController extends HttpServlet {
 			String cpf = decrypt(cpfRec, dKey, iv);
 			String name = decrypt(cpfRec, dKey, iv);
 			String email = decrypt(cpfRec, dKey, iv);
-			
+
 			User user = new User(cpf, name, email);
 			userRepository.save(user);
+
+			System.out.println(user.toString());
+
+			String finalResponse = "[{";
+			finalResponse += "\"PropName\":\"EXECFUNCTION002\",";
+			finalResponse += "\"PropValue\":";
+			finalResponse += "[";
+			finalResponse += "{\"";
+			finalResponse += "PropName\":\"Type\",";
+			finalResponse += "\"PropValue\":\"EXECFUNCTION\"";
+			finalResponse += "},";
+
+			// o AnnA captura o valor das variaveis aqui
+			finalResponse += "{";
+			finalResponse += "\"PropName\":\"Expression\",";
+			finalResponse += "\"PropValue\":\"AddParm(CPF," + cpf + ")AddParm(NOME," + name + ")AddParm(EMAIL," + email
+					+ ")\"";
+			finalResponse += "},";
+
+			finalResponse += "]";
+			finalResponse += "}]";
+
+			// Gerando um novo IV
+			byte[] randomBytes = new byte[8];
+			new Random().nextBytes(randomBytes);
+			final IvParameterSpec newIV = new IvParameterSpec(randomBytes);
+			String newIVEncoded = new String(Base64.getEncoder().encode(randomBytes));
+
+			// Encriptação do "IV Novo" com a chave de desencriptação e o "IV Recebido"
+			finalResponse = encrypt(finalResponse, eKey, newIV);
+			String newIVEncrip = encrypt(newIVEncoded, dKey, iv);
+
+			// Concatenação do JSON de resposta encriptado, o "IV Recebido" e o "IV Novo
+			// Encriptado"
+			finalResponse = finalResponse + ivReceived + newIVEncrip;
+
+			// Envio das informações ao AnnA
+			PrintWriter out = res.getWriter();
+			out.print(finalResponse);
 
 		} catch (Exception e) {
 
 		}
 
 	}// doPost
+
+	// metodos de encrypt e decrypt
+	public String encrypt(String message, SecretKey key, IvParameterSpec iv) throws NoSuchAlgorithmException,
+			NoSuchPaddingException, InvalidKeyException, InvalidAlgorithmParameterException,
+			UnsupportedEncodingException, IllegalBlockSizeException, BadPaddingException {
+		final Cipher cipher = Cipher.getInstance("DESede/CBC/PKCS5Padding");
+		cipher.init(Cipher.ENCRYPT_MODE, key, iv);
+		byte[] plainTextBytes = message.getBytes("utf-8");
+		byte[] buf = cipher.doFinal(plainTextBytes);
+		byte[] base64Bytes = Base64.getEncoder().encode(buf);
+		String base64EncryptedString = new String(base64Bytes);
+		return base64EncryptedString;
+	}
 
 	public String decrypt(String encMessage, SecretKey key, IvParameterSpec iv)
 			throws UnsupportedEncodingException, NoSuchAlgorithmException, NoSuchPaddingException, InvalidKeyException,
